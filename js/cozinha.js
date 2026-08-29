@@ -1,4 +1,4 @@
-// Senha de acesso definida para a cozinha (Altere se desejar)
+// Senha de acesso definida para a cozinha
 const SENHA_COZINHA_CORRETA = "cozinha123";
 
 /* --- CONTROLE DE SESSÃO E LOGIN --- */
@@ -37,7 +37,7 @@ function logoutCozinha() {
   verificarSessaoCozinha();
 }
 
-/* --- TRAVA DE SEGURANÇA E CARREGAMENTO DE COMANDAS --- */
+/* --- CARREGAMENTO DE COMANDAS --- */
 
 async function carregarPedidosCozinha() {
   const container = document.getElementById('lista-pedidos-kds') || document.getElementById('lista-comandas');
@@ -64,11 +64,11 @@ async function carregarPedidosCozinha() {
         return;
       }
 
-      // 2. Carrega APENAS pedidos pendentes para a cozinha
+      // 2. Carrega pedidos 'pendente' e 'em_preparo'
       const { data: pedidos, error: erroPedidos } = await supabaseClient
         .from('pedidos')
         .select('*')
-        .eq('status', 'pendente')
+        .in('status', ['pendente', 'em_preparo'])
         .order('id', { ascending: false });
 
       if (erroPedidos) {
@@ -76,7 +76,7 @@ async function carregarPedidosCozinha() {
         return;
       }
 
-      // Atualiza o contador de pendentes no topo
+      // Atualiza o contador de pendentes e em preparo no topo
       const contadorEl = document.getElementById('kds-count-pendentes') || 
                          document.getElementById('qtd-pendentes') || 
                          document.getElementById('contador-pedidos');
@@ -89,7 +89,7 @@ async function carregarPedidosCozinha() {
         if (!pedidos || pedidos.length === 0) {
           container.innerHTML = `
             <div class="col-span-full text-center py-20 text-zinc-500 font-bold text-sm">
-              Nenhum pedido pendente na cozinha.
+              Nenhum pedido pendente ou em preparo na cozinha.
             </div>
           `;
           return;
@@ -97,6 +97,7 @@ async function carregarPedidosCozinha() {
 
         container.innerHTML = pedidos.map(pedido => {
           const tempo = calcularTempoEspera(pedido.created_at);
+          const emPreparo = pedido.status === 'em_preparo';
           
           let itens = [];
           try {
@@ -106,14 +107,19 @@ async function carregarPedidosCozinha() {
           }
 
           return `
-            <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+            <div class="bg-zinc-900 border ${emPreparo ? 'border-orange-500/50 shadow-orange-950/20' : 'border-zinc-800'} rounded-2xl p-5 flex flex-col justify-between shadow-xl transition-all">
               <div>
                 <div class="flex items-center justify-between pb-3 border-b border-zinc-800 mb-4">
                   <div>
                     <span class="text-xs font-bold text-zinc-500 uppercase tracking-wider">Pedido #${pedido.id ? pedido.id.toString().slice(0, 5) : '---'}</span>
                     <h3 class="text-lg font-bold text-white mt-0.5">${pedido.cliente || 'Cliente'}</h3>
                   </div>
-                  <span class="text-xs font-bold px-2.5 py-1 rounded-full ${tempo.classe}">${tempo.texto}</span>
+                  <div class="flex flex-col items-end gap-1">
+                    <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${emPreparo ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30 animate-pulse' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'}">
+                      ${emPreparo ? '🔥 EM PREPARO' : '⏳ PENDENTE'}
+                    </span>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${tempo.classe}">${tempo.texto}</span>
+                  </div>
                 </div>
 
                 <div class="space-y-2 mb-4">
@@ -136,11 +142,18 @@ async function carregarPedidosCozinha() {
 
               <div class="pt-3 border-t border-zinc-800 flex items-center justify-between gap-2">
                 <button onclick="imprimirComanda('${pedido.id}')" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold text-xs px-3 py-2.5 rounded-xl transition-colors flex items-center gap-1.5">
-                  🖨️ Imprimir
+                  🖨️
                 </button>
-                <button onclick="concluirPedido('${pedido.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors flex-1">
-                  ✓ Finalizar
-                </button>
+
+                ${!emPreparo ? `
+                  <button onclick="iniciarPreparo('${pedido.id}')" class="bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors flex-1 shadow-lg shadow-orange-600/20">
+                    🔥 Iniciar Preparo
+                  </button>
+                ` : `
+                  <button onclick="concluirPedido('${pedido.id}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-colors flex-1 shadow-lg shadow-emerald-600/20">
+                    ✓ Finalizar Pedido
+                  </button>
+                `}
               </div>
             </div>
           `;
@@ -153,7 +166,39 @@ async function carregarPedidosCozinha() {
   }
 }
 
-/* --- FUNÇÃO DE IMPRESSÃO DA COMANDA TÉRMICA --- */
+/* --- ALTERAÇÕES DE STATUS DO PEDIDO --- */
+
+async function iniciarPreparo(id) {
+  if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+    const { error } = await supabaseClient
+      .from('pedidos')
+      .update({ status: 'em_preparo' })
+      .eq('id', id);
+
+    if (!error) {
+      carregarPedidosCozinha();
+    } else {
+      console.error("Erro ao iniciar preparo:", error.message);
+    }
+  }
+}
+
+async function concluirPedido(id) {
+  if (typeof supabaseClient !== 'undefined' && supabaseClient) {
+    const { error } = await supabaseClient
+      .from('pedidos')
+      .update({ status: 'concluido' })
+      .eq('id', id);
+
+    if (!error) {
+      carregarPedidosCozinha();
+    } else {
+      console.error("Erro ao concluir pedido:", error.message);
+    }
+  }
+}
+
+/* --- IMPRESSÃO TÉRMICA --- */
 
 async function imprimirComanda(id) {
   if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
@@ -220,7 +265,7 @@ async function imprimirComanda(id) {
   }
 }
 
-/* --- CALCULA O TEMPO DE ESPERA DO PEDIDO --- */
+/* --- CALCULA TEMPO DE ESPERA --- */
 
 function calcularTempoEspera(dataString) {
   if (!dataString) return { texto: "Recente", classe: "bg-zinc-800 text-zinc-300" };
@@ -236,24 +281,7 @@ function calcularTempoEspera(dataString) {
   return { texto: `⚠️ ${diffMinutos} min atrás`, classe: "bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse" };
 }
 
-/* --- FINALIZAR PEDIDO NA COZINHA --- */
-
-async function concluirPedido(id) {
-  if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-    const { error } = await supabaseClient
-      .from('pedidos')
-      .update({ status: 'concluido' })
-      .eq('id', id);
-
-    if (!error) {
-      carregarPedidosCozinha();
-    } else {
-      console.error("Erro ao concluir pedido:", error.message);
-    }
-  }
-}
-
-// Inicializa checando a sessão e atualiza a cada 5 segundos
+// Inicializa verificação de sessão e atualiza a cada 5 segundos
 verificarSessaoCozinha();
 setInterval(() => {
   if (localStorage.getItem('cozinha_logada') === 'true') {
