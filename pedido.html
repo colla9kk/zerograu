@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Acompanhar Pedido | Zero Grau Hamburgueria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+          colors: { brand: { 500: '#ef4444', 600: '#dc2626' } }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen p-4 sm:p-6 flex flex-col justify-between">
+
+  <div class="max-w-md mx-auto w-full space-y-6 pt-4">
+    <!-- Header -->
+    <div class="text-center">
+      <img src="logo-zero.jpg" alt="Zero Grau Hamburgueria" class="w-20 h-20 rounded-full object-cover border-2 border-brand-600/30 shadow-xl mx-auto mb-3">
+      <h1 class="text-xl font-black text-white">ZERO GRAU HAMBURGUERIA</h1>
+      <p class="text-xs text-zinc-400 mt-0.5">Acompanhamento de Pedido em Tempo Real</p>
+    </div>
+
+    <!-- Card de Status Principal -->
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl text-center relative overflow-hidden" id="card-status-container">
+      <p class="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-2">Status Atual</p>
+      
+      <div id="status-badge" class="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-extrabold text-sm px-4 py-2 rounded-2xl mb-4 animate-pulse">
+        ⏳ Carregando status...
+      </div>
+
+      <h2 id="status-titulo" class="text-xl font-black text-white mb-2">Buscando seu pedido...</h2>
+      <p id="status-descricao" class="text-xs text-zinc-400 leading-relaxed">Por favor, aguarde enquanto localizamos as informações do seu pedido.</p>
+
+      <!-- Linha do Tempo / Timeline -->
+      <div class="mt-8 pt-6 border-t border-zinc-800/80 grid grid-cols-3 gap-2 text-center text-[10px] font-bold uppercase">
+        <div id="step-1" class="text-zinc-600 space-y-1">
+          <span class="block text-base">📝</span>
+          <span>Recebido</span>
+        </div>
+        <div id="step-2" class="text-zinc-600 space-y-1">
+          <span class="block text-base">🔥</span>
+          <span>Em Preparo</span>
+        </div>
+        <div id="step-3" class="text-zinc-600 space-y-1">
+          <span class="block text-base">🛵</span>
+          <span>Pronto / Saiu</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detalhes do Pedido -->
+    <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-5 space-y-4">
+      <div class="flex justify-between items-center pb-3 border-b border-zinc-800">
+        <span class="text-xs font-bold text-zinc-400" id="detalhes-pedido-id">Pedido #---</span>
+        <span class="text-xs font-extrabold text-emerald-400" id="detalhes-pedido-total">R$ 0,00</span>
+      </div>
+
+      <div id="detalhes-itens" class="space-y-2 text-xs text-zinc-300">
+        <!-- Itens inseridos via JS -->
+      </div>
+
+      <div class="pt-3 border-t border-zinc-800 text-[11px] text-zinc-400 space-y-1">
+        <p>👤 <strong>Cliente:</strong> <span id="detalhes-cliente">---</span></p>
+        <p>🛵 <strong>Tipo:</strong> <span id="detalhes-tipo">---</span></p>
+        <p>📍 <strong>Endereço:</strong> <span id="detalhes-endereco">---</span></p>
+        <p>💳 <strong>Pagamento:</strong> <span id="detalhes-pagamento">---</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center py-6">
+    <a href="index.html" class="inline-flex items-center gap-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 text-xs font-bold px-5 py-3 rounded-2xl border border-zinc-800 transition">
+      ← Voltar ao Cardápio
+    </a>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/status.js"></script>
+</body>
+</html>

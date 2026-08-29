@@ -379,36 +379,15 @@ function cancelarPix() {
   pedidoPendente = null;
 }
 
-/* --- ENVIO DO PEDIDO, NOTIFICAÇÃO E LIMPEZA DO CARRINHO --- */
+/* --- ENVIO DO PEDIDO, NOTIFICAÇÃO, TELA DE ACOMPANHAMENTO E LIMPEZA --- */
 
 async function finalizarEEnviarPedido(pedido) {
   const nomeRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.nome) ? RESTAURANTE.nome : 'Zero Grau';
   const whatsRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.whatsapp) ? RESTAURANTE.whatsapp : '5513999999999';
 
-  let texto = `*NOVO PEDIDO - ${nomeRest.toUpperCase()}*\n`;
-  texto += `-----------------------------------\n`;
-  texto += `👤 *Cliente:* ${pedido.cliente}\n`;
-  texto += `🛵 *Tipo:* ${pedido.tipoEntrega.toUpperCase()}\n`;
-  if (pedido.tipoEntrega === 'delivery') {
-    texto += `📍 *Endereço:* ${pedido.endereco}${pedido.complemento ? ' (' + pedido.complemento + ')' : ''}\n`;
-  }
-  texto += `💳 *Pagamento:* ${pedido.pagamento}${pedido.pagamento === 'Pix' ? ' (CONFIRMADO ONLINE)' : ''}${pedido.troco ? ' (Troco p/: ' + pedido.troco + ')' : ''}\n`;
-  texto += `-----------------------------------\n\n`;
-
-  pedido.itens.forEach(i => {
-    const subtotal = (parseFloat(i.preco_unitario) || 0) * i.qtd;
-    texto += `• *${i.qtd}x* ${i.nome}\n  _R$ ${subtotal.toFixed(2).replace('.', ',')}_\n\n`;
-  });
-
-  if (pedido.obs) {
-    texto += `📝 *Observações:* ${pedido.obs}\n\n`;
-  }
-
-  texto += `-----------------------------------\n`;
-  texto += `*Valor Total:* R$ ${pedido.total.toFixed(2).replace('.', ',')}`;
-
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-    const { error } = await supabaseClient.from('pedidos').insert([{
+    // Insere no banco e recupera o registro criado com a ID única
+    const { data: novoPedido, error } = await supabaseClient.from('pedidos').insert([{
       cliente: pedido.cliente,
       tipo_entrega: pedido.tipoEntrega,
       endereco: pedido.endereco + (pedido.complemento ? ' (' + pedido.complemento + ')' : ''),
@@ -417,25 +396,58 @@ async function finalizarEEnviarPedido(pedido) {
       itens: pedido.itens,
       total: pedido.total,
       status: 'pendente'
-    }]);
+    }]).select().single();
 
-    if (error) {
-      console.error("❌ Erro ao salvar pedido no Supabase:", error.message);
-      alert("Atenção: Erro ao salvar pedido no banco de dados. " + error.message);
+    if (error || !novoPedido) {
+      console.error("❌ Erro ao salvar pedido no Supabase:", error?.message);
+      alert("Atenção: Erro ao salvar pedido no banco de dados. " + error?.message);
       return;
     }
+
+    const pedidoId = novoPedido.id;
+    const linkAcompanhamento = `${window.location.origin}/pedido?id=${pedidoId}`;
+
+    let texto = `*NOVO PEDIDO #${pedidoId} - ${nomeRest.toUpperCase()}*\n`;
+    texto += `-----------------------------------\n`;
+    texto += `👤 *Cliente:* ${pedido.cliente}\n`;
+    texto += `🛵 *Tipo:* ${pedido.tipoEntrega.toUpperCase()}\n`;
+    if (pedido.tipoEntrega === 'delivery') {
+      texto += `📍 *Endereço:* ${pedido.endereco}${pedido.complemento ? ' (' + pedido.complemento + ')' : ''}\n`;
+    }
+    texto += `💳 *Pagamento:* ${pedido.pagamento}${pedido.pagamento === 'Pix' ? ' (CONFIRMADO ONLINE)' : ''}${pedido.troco ? ' (Troco p/: ' + pedido.troco + ')' : ''}\n`;
+    texto += `-----------------------------------\n\n`;
+
+    pedido.itens.forEach(i => {
+      const subtotal = (parseFloat(i.preco_unitario) || 0) * i.qtd;
+      texto += `• *${i.qtd}x* ${i.nome}\n  _R$ ${subtotal.toFixed(2).replace('.', ',')}_\n\n`;
+    });
+
+    if (pedido.obs) {
+      texto += `📝 *Observações:* ${pedido.obs}\n\n`;
+    }
+
+    texto += `-----------------------------------\n`;
+    texto += `*Valor Total:* R$ ${pedido.total.toFixed(2).replace('.', ',')}\n\n`;
+    texto += `📍 *Acompanhe seu pedido em tempo real:* ${linkAcompanhamento}`;
+
+    carrinho = {};
+    atualizarBarra();
+    renderProdutos();
+
+    const formCheckout = document.getElementById('form-checkout');
+    if (formCheckout) formCheckout.reset();
+    pedidoPendente = null;
+
+    exibirNotificacaoTela("✅ Pedido enviado com sucesso!");
+
+    // Abre o WhatsApp para mandar o pedido
+    window.open(`https://wa.me/${whatsRest}?text=${encodeURIComponent(texto)}`, '_blank');
+    
+    // Redireciona a tela do cliente para a página de acompanhamento
+    setTimeout(() => {
+      window.location.href = `pedido.html?id=${pedidoId}`;
+    }, 1000);
   }
-
-  carrinho = {};
-  atualizarBarra();
-  renderProdutos();
-
-  const formCheckout = document.getElementById('form-checkout');
-  if (formCheckout) formCheckout.reset();
-  pedidoPendente = null;
-
-  exibirNotificacaoTela("✅ Pedido enviado com sucesso para a cozinha!");
-  window.open(`https://wa.me/${whatsRest}?text=${encodeURIComponent(texto)}`, '_blank');
 }
 
 // Inicializa a página
