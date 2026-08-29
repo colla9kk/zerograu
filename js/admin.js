@@ -1,3 +1,44 @@
+// Senha de acesso definida para o admin (Pode alterar aqui se quiser)
+const SENHA_ADMIN_CORRETA = "admin123";
+
+/* --- VALIDAÇÃO DE LOGIN E SESSÃO --- */
+
+function verificarSessaoAdmin() {
+  const logado = localStorage.getItem('admin_logado');
+  const modalLogin = document.getElementById('modal-login-admin');
+  const conteudoAdmin = document.getElementById('conteudo-admin');
+
+  if (logado === 'true') {
+    if (modalLogin) modalLogin.classList.add('hidden');
+    if (conteudoAdmin) conteudoAdmin.classList.remove('hidden');
+    carregarProdutosAdmin();
+    carregarRelatorioVendas();
+    carregarStatusLojaAdmin();
+  } else {
+    if (modalLogin) modalLogin.classList.remove('hidden');
+    if (conteudoAdmin) conteudoAdmin.classList.add('hidden');
+  }
+}
+
+function realizarLoginAdmin(event) {
+  event.preventDefault();
+  const senhaInput = document.getElementById('senha-admin-input').value;
+  const msgErro = document.getElementById('msg-erro-login');
+
+  if (senhaInput === SENHA_ADMIN_CORRETA) {
+    localStorage.setItem('admin_logado', 'true');
+    if (msgErro) msgErro.classList.add('hidden');
+    verificarSessaoAdmin();
+  } else {
+    if (msgErro) msgErro.classList.remove('hidden');
+  }
+}
+
+function logoutAdmin() {
+  localStorage.removeItem('admin_logado');
+  verificarSessaoAdmin();
+}
+
 /* --- GESTÃO DE PRODUTOS --- */
 
 async function carregarProdutosAdmin() {
@@ -230,7 +271,5 @@ async function salvarHorariosAtendimento(e) {
   carregarStatusLojaAdmin();
 }
 
-// Inicialização
-carregarProdutosAdmin();
-carregarRelatorioVendas();
-carregarStatusLojaAdmin();
+// Inicialização com Verificação de Sessão
+verificarSessaoAdmin();

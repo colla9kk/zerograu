@@ -1,103 +1,149 @@
 <!DOCTYPE html>
 <html lang="pt-BR" class="dark">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Zero Grau | Gerenciar Cardápio</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <title>Admin - Zero Grau</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
-          fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
-          colors: { brand: { 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c' } }
+          colors: {
+            brand: { 500: '#ef4444', 600: '#dc2626' }
+          }
         }
       }
     }
   </script>
 </head>
-<body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen pb-12">
+<body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen p-4 sm:p-6 pb-20">
 
-  <header class="bg-zinc-900/90 border-b border-zinc-800 sticky top-0 z-30 px-6 py-4 backdrop-blur">
-    <div class="max-w-4xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center font-black text-white text-lg">0°</div>
+  <!-- MODAL DE LOGIN (Aparece se não estiver logado) -->
+  <div id="modal-login-admin" class="fixed inset-0 bg-zinc-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white font-black text-xl">0°</div>
+        <h2 class="text-xl font-bold text-white">Painel Administrativo</h2>
+        <p class="text-xs text-zinc-400 mt-1">Digite a senha de acesso da loja</p>
+      </div>
+
+      <form onsubmit="realizarLoginAdmin(event)" class="space-y-4">
         <div>
-          <h1 class="font-extrabold text-lg text-white">PAINEL ADMINISTRATIVO</h1>
-          <p class="text-xs text-zinc-400">Gerenciador de Cardápio em Tempo Real</p>
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Senha de Acesso</label>
+          <input type="password" id="senha-admin-input" required placeholder="••••••••" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <p id="msg-erro-login" class="text-xs text-red-500 font-bold hidden text-center">Senha incorreta. Tente novamente.</p>
+        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-xl transition text-sm">
+          Entrar no Painel
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CONTEÚDO DO PAINEL ADMIN (Fica oculto até logar) -->
+  <div id="conteudo-admin" class="hidden max-w-5xl mx-auto">
+    
+    <!-- Header Admin -->
+    <header class="flex items-center justify-between pb-6 border-b border-zinc-800 mb-8">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center font-black text-xl text-white">0°</div>
+        <div>
+          <h1 class="text-xl font-bold text-white">PAINEL ADMINISTRATIVO</h1>
+          <p class="text-xs text-zinc-400">Gestão de Cardápio, Vendas e Horários</p>
         </div>
       </div>
-      <a href="index.html" target="_blank" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-bold px-3 py-2 rounded-xl transition">
-        👁️ Ver Cardápio
-      </a>
-    </div>
-  </header>
+      <button onclick="logoutAdmin()" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 text-xs font-bold px-4 py-2 rounded-xl border border-zinc-800 transition">
+        🚪 Sair
+      </button>
+    </header>
 
-  <main class="max-w-4xl mx-auto px-6 mt-8 space-y-8">
-    
-    <!-- Form de Novo Produto -->
-    <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
-      <h2 class="text-base font-extrabold text-white mb-4 flex items-center gap-2">
-        <span>➕ Cadastrar Novo Item</span>
-      </h2>
+    <!-- Seção de Relatório de Vendas -->
+    <section class="mb-10">
+      <h2 class="text-sm font-extrabold text-zinc-400 uppercase tracking-wider mb-4">📊 Resumo de Vendas</h2>
+      <div id="relatorio-vendas-container">
+        <div class="text-xs text-zinc-500">Carregando métricas...</div>
+      </div>
+    </section>
 
+    <!-- Seção de Horário e Status da Loja -->
+    <section class="mb-10 bg-zinc-900 border border-zinc-800 p-5 rounded-2xl">
+      <h2 class="text-sm font-extrabold text-zinc-400 uppercase tracking-wider mb-4">🕒 Status e Horário de Funcionamento</h2>
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <button id="admin-btn-toggle-loja" class="bg-zinc-800 text-zinc-400 font-bold text-xs px-4 py-2.5 rounded-xl transition">
+            Carregando status...
+          </button>
+        </div>
+        <form onsubmit="salvarHorariosAtendimento(event)" class="flex items-center gap-2">
+          <input type="time" id="admin-hora-abertura" class="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white">
+          <span class="text-xs text-zinc-500">até</span>
+          <input type="time" id="admin-hora-fechamento" class="bg-zinc-950 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white">
+          <button type="submit" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs px-3 py-2 rounded-xl transition">
+            Salvar
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Form de Cadastro de Produto -->
+    <section class="mb-10 bg-zinc-900 border border-zinc-800 p-5 rounded-2xl">
+      <h2 class="text-sm font-extrabold text-zinc-400 uppercase tracking-wider mb-4">➕ Adicionar Novo Produto</h2>
       <form id="form-add-produto" onsubmit="salvarProduto(event)" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold text-zinc-300 mb-1">Nome do Item *</label>
-            <input type="text" id="p-nome" required placeholder="Ex: Açaí Turbinado 500ml" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Nome do Produto</label>
+            <input type="text" id="p-nome" required placeholder="Ex: X-Salada Especial" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
           </div>
           <div>
-            <label class="block text-xs font-bold text-zinc-300 mb-1">Categoria *</label>
-            <select id="p-cat" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
-              <option value="burgers">🍔 Hambúrgueres</option>
-              <option value="combos">🔥 Combos</option>
-              <option value="acai">🍧 Açaí</option>
-              <option value="porcoes">🍟 Porções</option>
-              <option value="bebidas">🥤 Bebidas</option>
-              <option value="sobremesas">🍰 Sobremesas</option>
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Categoria</label>
+            <select id="p-cat" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+              <option value="burgers">Hambúrgueres</option>
+              <option value="porcoes">Porções</option>
+              <option value="bebidas">Bebidas</option>
+              <option value="sobremesas">Sobremesas</option>
             </select>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-bold text-zinc-300 mb-1">Preço (R$) *</label>
-            <input type="text" id="p-preco" required placeholder="25,90" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Preço (R$)</label>
+            <input type="text" id="p-preco" required placeholder="29.90" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
           </div>
           <div>
-            <label class="block text-xs font-bold text-zinc-300 mb-1">Selo / Badge (Opcional)</label>
-            <input type="text" id="p-badge" placeholder="Ex: Mais Pedido, Promoção" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Selo / Badge (Opcional)</label>
+            <input type="text" id="p-badge" placeholder="Ex: MAIS VENDIDO" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Foto do Produto (Enviar do Celular ou PC)</label>
-          <input type="file" id="p-imagem-file" accept="image/*" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white hover:file:bg-zinc-700 cursor-pointer">
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Imagem do Produto (Arquivo)</label>
+          <input type="file" id="p-imagem-file" accept="image/*" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2 text-xs text-zinc-400 file:mr-4 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-zinc-200">
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Descrição / Ingredientes</label>
-          <textarea id="p-desc" rows="2" placeholder="Ex: Açaí com banana, leite em pó e leite condensado" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500 resize-none"></textarea>
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Descrição</label>
+          <textarea id="p-desc" rows="2" placeholder="Ingredientes e detalhes..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500"></textarea>
         </div>
 
-        <button type="submit" id="btn-salvar" class="w-full bg-brand-600 hover:bg-brand-500 font-extrabold text-sm py-3.5 rounded-xl transition">
+        <button type="submit" id="btn-salvar" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-xl transition text-xs">
           Salvar Produto no Cardápio
         </button>
       </form>
-    </div>
+    </section>
 
     <!-- Lista de Produtos Cadastrados -->
-    <div class="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
-      <h2 class="text-base font-extrabold text-white mb-4">Cardápio Atual</h2>
-      <div id="lista-admin-produtos" class="space-y-3"></div>
-    </div>
+    <section>
+      <h2 class="text-sm font-extrabold text-zinc-400 uppercase tracking-wider mb-4">📦 Produtos Cadastrados</h2>
+      <div id="lista-admin-produtos" class="space-y-3">
+        <p class="text-xs text-zinc-500">Carregando produtos...</p>
+      </div>
+    </section>
 
-  </main>
+  </div>
 
   <script src="js/config.js"></script>
   <script src="js/admin.js"></script>
