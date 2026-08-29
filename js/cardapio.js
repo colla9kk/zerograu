@@ -6,8 +6,9 @@ let carrinho = {};
 let categoriaAtual = 'todos';
 let tipoEntrega = 'delivery';
 let pedidoPendente = null;
+let statusLojaCache = { aberta: true, motivo: '' };
 
-/* --- TRAVA DE SEGURANÇA E VALIDAÇÃO DE HORÁRIO DE FUNCIONAMENTO --- */
+/* --- CHECAGEM E VALIDAÇÃO DE STATUS DA LOJA --- */
 
 async function checarStatusLoja() {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
@@ -31,7 +32,7 @@ async function checarStatusLoja() {
         return false;
       }
     } catch (err) {
-      console.warn("Erro ao checar status da loja:", err);
+      console.warn("Erro ao checar status da assinatura:", err);
     }
   }
   return true;
@@ -83,6 +84,26 @@ async function verificarLojaAberta() {
   return { aberta: true };
 }
 
+// Renderiza o aviso no topo da tela do cardápio se a loja estiver fechada
+async function atualizarAvisoLojaFechada() {
+  statusLojaCache = await verificarLojaAberta();
+  let banner = document.getElementById('banner-loja-fechada');
+
+  if (!statusLojaCache.aberta) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'banner-loja-fechada';
+      banner.className = 'bg-red-950/90 border-b border-red-500/30 text-red-200 px-4 py-3 text-center text-xs font-bold sticky top-0 z-40 backdrop-blur-md flex items-center justify-center gap-2';
+      document.body.prepend(banner);
+    }
+    banner.innerHTML = `🔴 LOJA FECHADA: ${statusLojaCache.motivo}`;
+  } else if (banner) {
+    banner.remove();
+  }
+
+  atualizarBarra();
+}
+
 /* --- SISTEMA DE NOTIFICAÇÃO EM TELA (TOAST) --- */
 
 function exibirNotificacaoTela(mensagem) {
@@ -117,6 +138,8 @@ function exibirNotificacaoTela(mensagem) {
 async function carregarProdutosDoBanco() {
   const lojaAtiva = await checarStatusLoja();
   if (!lojaAtiva) return;
+
+  await atualizarAvisoLojaFechada();
 
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     try {
@@ -225,10 +248,20 @@ function atualizarBarra() {
   });
 
   const barra = document.getElementById('bar-checkout');
+  const btnFinalizar = barra ? barra.querySelector('button') : null;
+
   if (totalItens > 0) {
     barra.classList.remove('translate-y-full');
     document.getElementById('qtd-itens').innerText = `${totalItens} ${totalItens === 1 ? 'item selecionado' : 'itens selecionados'}`;
     document.getElementById('total-valor').innerText = `R$ ${totalPreco.toFixed(2).replace('.', ',')}`;
+
+    if (!statusLojaCache.aberta && btnFinalizar) {
+      btnFinalizar.innerText = "Loja Fechada";
+      btnFinalizar.className = "bg-zinc-800 text-zinc-500 font-bold px-5 py-2.5 rounded-xl cursor-not-allowed";
+    } else if (btnFinalizar) {
+      btnFinalizar.innerText = "Ver Pedido →";
+      btnFinalizar.className = "bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-brand-600/20";
+    }
   } else {
     barra.classList.add('translate-y-full');
   }
