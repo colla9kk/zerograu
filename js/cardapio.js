@@ -267,7 +267,54 @@ function atualizarBarra() {
   }
 }
 
-/* --- CÁLCULO DE TAXA DE ENTREGA E BAIRRO --- */
+/* --- TIPO DE ENTREGA / MESAS E CÁLCULO DE TAXA --- */
+
+function setTipoEntrega(tipo) {
+  tipoEntrega = tipo;
+  const btnDel = document.getElementById('btn-tipo-delivery');
+  const btnRet = document.getElementById('btn-tipo-retirada');
+  const btnMesa = document.getElementById('btn-tipo-mesa');
+
+  const campoEnd = document.getElementById('campo-endereco');
+  const campoMesa = document.getElementById('campo-mesa');
+
+  const inputEnd = document.getElementById('cli-endereco');
+  const selectBairro = document.getElementById('cli-bairro');
+  const inputMesa = document.getElementById('cli-mesa');
+
+  // Reset visual dos botões
+  [btnDel, btnRet, btnMesa].forEach(btn => {
+    if (btn) btn.className = "bg-zinc-900 text-zinc-400 font-bold text-[11px] py-2.5 rounded-xl border border-zinc-800 transition";
+  });
+
+  if (tipo === 'delivery') {
+    if (btnDel) btnDel.className = "bg-brand-600 text-white font-bold text-[11px] py-2.5 rounded-xl border border-brand-500 transition";
+    if (campoEnd) campoEnd.classList.remove('hidden');
+    if (campoMesa) campoMesa.classList.add('hidden');
+    if (inputEnd) inputEnd.setAttribute('required', 'true');
+    if (selectBairro) selectBairro.setAttribute('required', 'true');
+    if (inputMesa) inputMesa.removeAttribute('required');
+    atualizarTaxaBairro();
+  } else if (tipo === 'retirada') {
+    if (btnRet) btnRet.className = "bg-brand-600 text-white font-bold text-[11px] py-2.5 rounded-xl border border-brand-500 transition";
+    if (campoEnd) campoEnd.classList.add('hidden');
+    if (campoMesa) campoMesa.classList.add('hidden');
+    if (inputEnd) inputEnd.removeAttribute('required');
+    if (selectBairro) selectBairro.removeAttribute('required');
+    if (inputMesa) inputMesa.removeAttribute('required');
+    taxaEntrega = 0;
+  } else if (tipo === 'mesa') {
+    if (btnMesa) btnMesa.className = "bg-brand-600 text-white font-bold text-[11px] py-2.5 rounded-xl border border-brand-500 transition";
+    if (campoEnd) campoEnd.classList.add('hidden');
+    if (campoMesa) campoMesa.classList.remove('hidden');
+    if (inputEnd) inputEnd.removeAttribute('required');
+    if (selectBairro) selectBairro.removeAttribute('required');
+    if (inputMesa) inputMesa.setAttribute('required', 'true');
+    taxaEntrega = 0;
+  }
+
+  atualizarTotaisModal();
+}
 
 function atualizarTaxaBairro() {
   const selectBairro = document.getElementById('cli-bairro');
@@ -334,34 +381,6 @@ function fecharModalCheckout() {
   document.getElementById('modal-checkout').classList.add('hidden');
 }
 
-function setTipoEntrega(tipo) {
-  tipoEntrega = tipo;
-  const btnDel = document.getElementById('btn-tipo-delivery');
-  const btnRet = document.getElementById('btn-tipo-retirada');
-  const campoEnd = document.getElementById('campo-endereco');
-  const inputEnd = document.getElementById('cli-endereco');
-  const selectBairro = document.getElementById('cli-bairro');
-
-  if (tipo === 'delivery') {
-    btnDel.className = "bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl border border-brand-500";
-    btnRet.className = "bg-zinc-900 text-zinc-400 font-bold text-xs py-2.5 rounded-xl border border-zinc-800";
-    if (campoEnd) campoEnd.classList.remove('hidden');
-    if (inputEnd) inputEnd.setAttribute('required', 'true');
-    if (selectBairro) selectBairro.setAttribute('required', 'true');
-    
-    atualizarTaxaBairro();
-  } else {
-    btnRet.className = "bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl border border-brand-500";
-    btnDel.className = "bg-zinc-900 text-zinc-400 font-bold text-xs py-2.5 rounded-xl border border-zinc-800";
-    if (campoEnd) campoEnd.classList.add('hidden');
-    if (inputEnd) inputEnd.removeAttribute('required');
-    if (selectBairro) selectBairro.removeAttribute('required');
-    taxaEntrega = 0;
-  }
-
-  atualizarTotaisModal();
-}
-
 function toggleTroco(pagamento) {
   const campoTroco = document.getElementById('campo-troco');
   if (pagamento === 'Dinheiro') {
@@ -378,6 +397,7 @@ function processarPedido(event) {
   const selectBairro = document.getElementById('cli-bairro');
   const bairroNome = selectBairro && selectBairro.value ? selectBairro.value : '';
   const rua = document.getElementById('cli-endereco') ? document.getElementById('cli-endereco').value : '';
+  const numMesa = document.getElementById('cli-mesa') ? document.getElementById('cli-mesa').value : '';
   const complemento = document.getElementById('cli-complemento').value;
   const pagamento = document.getElementById('cli-pagamento').value;
   const troco = document.getElementById('cli-troco').value;
@@ -398,13 +418,19 @@ function processarPedido(event) {
   const taxaAplicada = (tipoEntrega === 'delivery') ? taxaEntrega : 0;
   const total = subtotal + taxaAplicada;
 
-  const enderecoCompleto = tipoEntrega === 'delivery' 
-    ? `Bairro: ${bairroNome} - ${rua}`
-    : 'Retirada no Balcão';
+  let enderecoCompleto = '';
+  if (tipoEntrega === 'delivery') {
+    enderecoCompleto = `Bairro: ${bairroNome} - ${rua}`;
+  } else if (tipoEntrega === 'mesa') {
+    enderecoCompleto = `Mesa ${numMesa} (Consumo no Local)`;
+  } else {
+    enderecoCompleto = 'Retirada no Balcão';
+  }
 
   pedidoPendente = {
     cliente: nome,
     bairro: bairroNome,
+    mesa: numMesa,
     taxaEntrega: taxaAplicada,
     tipoEntrega: tipoEntrega,
     endereco: enderecoCompleto,
@@ -480,11 +506,17 @@ async function finalizarEEnviarPedido(pedido) {
     let texto = `*NOVO PEDIDO #${pedidoId} - ${nomeRest.toUpperCase()}*\n`;
     texto += `-----------------------------------\n`;
     texto += `👤 *Cliente:* ${pedido.cliente}\n`;
-    texto += `🛵 *Tipo:* ${pedido.tipoEntrega.toUpperCase()}\n`;
+
     if (pedido.tipoEntrega === 'delivery') {
+      texto += `🛵 *Tipo:* DELIVERY\n`;
       texto += `📍 *Endereço:* ${pedido.endereco}${pedido.complemento ? ' (' + pedido.complemento + ')' : ''}\n`;
       texto += `🛵 *Taxa de Entrega:* R$ ${pedido.taxaEntrega.toFixed(2).replace('.', ',')}\n`;
+    } else if (pedido.tipoEntrega === 'mesa') {
+      texto += `🍽️ *Tipo:* CONSUMO NO LOCAL (MESA ${pedido.mesa})\n`;
+    } else {
+      texto += `🛍️ *Tipo:* RETIRADA NO BALCÃO\n`;
     }
+
     texto += `💳 *Pagamento:* ${pedido.pagamento}${pedido.pagamento === 'Pix' ? ' (CONFIRMADO ONLINE)' : ''}${pedido.troco ? ' (Troco p/: ' + pedido.troco + ')' : ''}\n`;
     texto += `-----------------------------------\n\n`;
 
