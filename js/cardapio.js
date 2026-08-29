@@ -41,6 +41,7 @@ async function checarStatusLoja() {
 async function verificarLojaAberta() {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     try {
+      // Consulta direta sem cache local
       const { data: config, error } = await supabaseClient
         .from('restaurantes')
         .select('loja_aberta, hora_abertura, hora_fechamento')
@@ -383,10 +384,9 @@ function cancelarPix() {
 
 async function finalizarEEnviarPedido(pedido) {
   const nomeRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.nome) ? RESTAURANTE.nome : 'Zero Grau';
-  const whatsRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.whatsapp) ? RESTAURANTE.whatsapp : '5513999999999';
+  const whatsRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.whatsapp) ? RESTAURANTE.whatsapp : '554298292510';
 
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
-    // Insere no banco e recupera o registro criado com a ID única
     const { data: novoPedido, error } = await supabaseClient.from('pedidos').insert([{
       cliente: pedido.cliente,
       tipo_entrega: pedido.tipoEntrega,
@@ -405,7 +405,7 @@ async function finalizarEEnviarPedido(pedido) {
     }
 
     const pedidoId = novoPedido.id;
-    const linkAcompanhamento = `${window.location.origin}/pedido?id=${pedidoId}`;
+    const linkAcompanhamento = `${window.location.origin}/pedido.html?id=${pedidoId}`;
 
     let texto = `*NOVO PEDIDO #${pedidoId} - ${nomeRest.toUpperCase()}*\n`;
     texto += `-----------------------------------\n`;
@@ -440,10 +440,8 @@ async function finalizarEEnviarPedido(pedido) {
 
     exibirNotificacaoTela("✅ Pedido enviado com sucesso!");
 
-    // Abre o WhatsApp para mandar o pedido
     window.open(`https://wa.me/${whatsRest}?text=${encodeURIComponent(texto)}`, '_blank');
     
-    // Redireciona a tela do cliente para a página de acompanhamento
     setTimeout(() => {
       window.location.href = `pedido.html?id=${pedidoId}`;
     }, 1000);
