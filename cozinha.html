@@ -42,38 +42,68 @@
 </head>
 <body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen p-4 sm:p-6 pb-12">
 
-  <!-- Header do Painel -->
-  <header class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-zinc-800 mb-6 max-w-7xl mx-auto">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center font-black text-xl text-white">0°</div>
-      <div>
-        <h1 class="text-xl font-bold text-white flex items-center gap-2">
-          PAINEL DA COZINHA
-          <span class="bg-brand-500/10 text-brand-500 border border-brand-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">KDS LIVE</span>
-        </h1>
-        <p class="text-xs text-zinc-400">Monitor de Preparo em Tempo Real</p>
+  <!-- MODAL DE LOGIN DA COZINHA (Aparece se não estiver logado) -->
+  <div id="modal-login-cozinha" class="fixed inset-0 bg-zinc-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+      <div class="text-center mb-6">
+        <img src="logo-zero.jpg" alt="Zero Grau Hamburgueria" class="w-16 h-16 rounded-full object-cover border-2 border-brand-600/30 shadow-lg mx-auto mb-3">
+        <h2 class="text-xl font-bold text-white">Painel da Cozinha (KDS)</h2>
+        <p class="text-xs text-zinc-400 mt-1">Digite a senha para acessar as comandas</p>
       </div>
-    </div>
 
-    <!-- Indicadores do Topo -->
-    <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-      <div class="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-center">
-        <span class="text-[10px] font-extrabold text-zinc-500 uppercase block">Pendentes</span>
-        <span id="kds-count-pendentes" class="text-lg font-black text-brand-500">0</span>
-      </div>
-      <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl">
-        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="text-xs font-bold text-emerald-400">Conectado ao Vivo</span>
-      </div>
+      <form onsubmit="realizarLoginCozinha(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Senha da Cozinha</label>
+          <input type="password" id="senha-cozinha-input" required placeholder="••••••••" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500">
+        </div>
+        <p id="msg-erro-login-cozinha" class="text-xs text-red-500 font-bold hidden text-center">Senha incorreta. Tente novamente.</p>
+        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-xl transition text-sm">
+          Entrar na Cozinha
+        </button>
+      </form>
     </div>
-  </header>
+  </div>
 
-  <!-- Container Grid dos Cards -->
-  <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-7xl mx-auto" id="lista-pedidos-kds">
-    <div class="col-span-full text-center py-20 text-zinc-500 font-bold text-sm">
-      🔄 Carregando comandas...
-    </div>
-  </main>
+  <!-- CONTEÚDO DO PAINEL DA COZINHA (Fica oculto até logar) -->
+  <div id="conteudo-cozinha" class="hidden">
+    
+    <!-- Header do Painel -->
+    <header class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-zinc-800 mb-6 max-w-7xl mx-auto">
+      <div class="flex items-center gap-3">
+        <img src="logo-zero.jpg" alt="Zero Grau Hamburgueria" class="w-12 h-12 rounded-full object-cover border-2 border-brand-600/30 shadow-md">
+        <div>
+          <h1 class="text-xl font-bold text-white flex items-center gap-2">
+            PAINEL DA COZINHA
+            <span class="bg-brand-500/10 text-brand-500 border border-brand-500/20 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">KDS LIVE</span>
+          </h1>
+          <p class="text-xs text-zinc-400">Monitor de Preparo em Tempo Real</p>
+        </div>
+      </div>
+
+      <!-- Indicadores do Topo + Botão de Sair -->
+      <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <div class="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-center">
+          <span class="text-[10px] font-extrabold text-zinc-500 uppercase block">Pendentes</span>
+          <span id="kds-count-pendentes" class="text-lg font-black text-brand-500">0</span>
+        </div>
+        <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-bold text-emerald-400">Conectado ao Vivo</span>
+        </div>
+        <button onclick="logoutCozinha()" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-400 text-xs font-bold px-3 py-2.5 rounded-xl border border-zinc-800 transition">
+          🚪 Sair
+        </button>
+      </div>
+    </header>
+
+    <!-- Container Grid dos Cards -->
+    <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-7xl mx-auto" id="lista-pedidos-kds">
+      <div class="col-span-full text-center py-20 text-zinc-500 font-bold text-sm">
+        🔄 Carregando comandas...
+      </div>
+    </main>
+
+  </div>
 
   <!-- Container Oculto para Impressão Térmica -->
   <div id="comanda-impressao" class="hidden"></div>

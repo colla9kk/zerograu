@@ -1,4 +1,41 @@
-let ultimosPedidosQtd = 0;
+// Senha de acesso definida para a cozinha (Altere se desejar)
+const SENHA_COZINHA_CORRETA = "cozinha123";
+
+/* --- CONTROLE DE SESSÃO E LOGIN --- */
+
+function verificarSessaoCozinha() {
+  const logado = localStorage.getItem('cozinha_logada');
+  const modalLogin = document.getElementById('modal-login-cozinha');
+  const conteudoCozinha = document.getElementById('conteudo-cozinha');
+
+  if (logado === 'true') {
+    if (modalLogin) modalLogin.classList.add('hidden');
+    if (conteudoCozinha) conteudoCozinha.classList.remove('hidden');
+    carregarPedidosCozinha();
+  } else {
+    if (modalLogin) modalLogin.classList.remove('hidden');
+    if (conteudoCozinha) conteudoCozinha.classList.add('hidden');
+  }
+}
+
+function realizarLoginCozinha(event) {
+  event.preventDefault();
+  const senhaInput = document.getElementById('senha-cozinha-input').value;
+  const msgErro = document.getElementById('msg-erro-login-cozinha');
+
+  if (senhaInput === SENHA_COZINHA_CORRETA) {
+    localStorage.setItem('cozinha_logada', 'true');
+    if (msgErro) msgErro.classList.add('hidden');
+    verificarSessaoCozinha();
+  } else {
+    if (msgErro) msgErro.classList.remove('hidden');
+  }
+}
+
+function logoutCozinha() {
+  localStorage.removeItem('cozinha_logada');
+  verificarSessaoCozinha();
+}
 
 /* --- TRAVA DE SEGURANÇA E CARREGAMENTO DE COMANDAS --- */
 
@@ -216,6 +253,10 @@ async function concluirPedido(id) {
   }
 }
 
-// Inicializa e recarrega a cada 5 segundos
-carregarPedidosCozinha();
-setInterval(carregarPedidosCozinha, 5000);
+// Inicializa checando a sessão e atualiza a cada 5 segundos
+verificarSessaoCozinha();
+setInterval(() => {
+  if (localStorage.getItem('cozinha_logada') === 'true') {
+    carregarPedidosCozinha();
+  }
+}, 5000);
