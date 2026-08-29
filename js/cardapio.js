@@ -5,6 +5,7 @@ if (typeof PRODUTOS === 'undefined') {
 let carrinho = {};
 let categoriaAtual = 'todos';
 let tipoEntrega = 'delivery';
+let taxaEntrega = 0;
 let pedidoPendente = null;
 let statusLojaCache = { aberta: true, motivo: '' };
 
@@ -41,7 +42,6 @@ async function checarStatusLoja() {
 async function verificarLojaAberta() {
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     try {
-      // Consulta direta sem cache local
       const { data: config, error } = await supabaseClient
         .from('restaurantes')
         .select('loja_aberta, hora_abertura, hora_fechamento')
@@ -85,7 +85,6 @@ async function verificarLojaAberta() {
   return { aberta: true };
 }
 
-// Renderiza o aviso no topo da tela do cardápio se a loja estiver fechada
 async function atualizarAvisoLojaFechada() {
   statusLojaCache = await verificarLojaAberta();
   let banner = document.getElementById('banner-loja-fechada');
@@ -105,7 +104,7 @@ async function atualizarAvisoLojaFechada() {
   atualizarBarra();
 }
 
-/* --- SISTEMA DE NOTIFICAÇÃO EM TELA (TOAST) --- */
+/* --- TOAST DE NOTIFICAÇÃO --- */
 
 function exibirNotificacaoTela(mensagem) {
   let toast = document.getElementById('toast-notificacao');
@@ -134,7 +133,7 @@ function exibirNotificacaoTela(mensagem) {
   }, 4000);
 }
 
-/* --- CARREGAMENTO DINÂMICO DOS PRODUTOS DO BANCO --- */
+/* --- CARREGAMENTO DE PRODUTOS --- */
 
 async function carregarProdutosDoBanco() {
   const lojaAtiva = await checarStatusLoja();
@@ -171,7 +170,7 @@ async function carregarProdutosDoBanco() {
   renderProdutos();
 }
 
-/* --- RENDERIZAÇÃO E CARDÁPIO --- */
+/* --- RENDERIZAÇÃO DO CARDÁPIO --- */
 
 function renderProdutos() {
   const container = document.getElementById('lista-produtos');
@@ -268,6 +267,57 @@ function atualizarBarra() {
   }
 }
 
+/* --- CÁLCULO DE TAXA DE ENTREGA E BAIRRO --- */
+
+function atualizarTaxaBairro() {
+  const selectBairro = document.getElementById('cli-bairro');
+  if (!selectBairro) return;
+
+  const option = selectBairro.options[selectBairro.selectedIndex];
+  if (!option || !option.value) return;
+
+  const eRetirada = option.getAttribute('data-retirada') === 'true';
+
+  if (eRetirada) {
+    alert("⚠️ ATENÇÃO: Não realizamos entregas fora do perímetro urbano / interior.\n\nSeu pedido foi alterado automaticamente para RETIRADA NO BALCÃO.");
+    setTipoEntrega('retirada');
+    taxaEntrega = 0;
+  } else {
+    taxaEntrega = parseFloat(option.getAttribute('data-taxa')) || 0;
+  }
+
+  atualizarTotaisModal();
+}
+
+function atualizarTotaisModal() {
+  let subtotal = 0;
+  Object.keys(carrinho).forEach(id => {
+    const prod = PRODUTOS.find(p => p.id == id);
+    if (prod) {
+      subtotal += (parseFloat(prod.preco) || 0) * carrinho[id];
+    }
+  });
+
+  const taxaAplicada = (tipoEntrega === 'delivery') ? taxaEntrega : 0;
+  const totalFinal = subtotal + taxaAplicada;
+
+  const elSubtotal = document.getElementById('modal-subtotal-val');
+  const elTaxa = document.getElementById('modal-taxa-val');
+  const elLinhaTaxa = document.getElementById('linha-taxa-entrega');
+  const elTotal = document.getElementById('modal-total-val');
+
+  if (elSubtotal) elSubtotal.innerText = `R$ ${subtotal.toFixed(2).replace('.', ',')}`;
+  if (elTaxa) elTaxa.innerText = `R$ ${taxaAplicada.toFixed(2).replace('.', ',')}`;
+  if (elTotal) elTotal.innerText = `R$ ${totalFinal.toFixed(2).replace('.', ',')}`;
+  if (elLinhaTaxa) {
+    if (tipoEntrega === 'delivery') {
+      elLinhaTaxa.classList.remove('hidden');
+    } else {
+      elLinhaTaxa.classList.add('hidden');
+    }
+  }
+}
+
 /* --- MODAIS & CHECKOUT --- */
 
 async function abrirModalCheckout() {
@@ -277,6 +327,7 @@ async function abrirModalCheckout() {
     return;
   }
   document.getElementById('modal-checkout').classList.remove('hidden');
+  atualizarTotaisModal();
 }
 
 function fecharModalCheckout() {
@@ -289,18 +340,26 @@ function setTipoEntrega(tipo) {
   const btnRet = document.getElementById('btn-tipo-retirada');
   const campoEnd = document.getElementById('campo-endereco');
   const inputEnd = document.getElementById('cli-endereco');
+  const selectBairro = document.getElementById('cli-bairro');
 
   if (tipo === 'delivery') {
     btnDel.className = "bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl border border-brand-500";
     btnRet.className = "bg-zinc-900 text-zinc-400 font-bold text-xs py-2.5 rounded-xl border border-zinc-800";
-    campoEnd.classList.remove('hidden');
-    inputEnd.setAttribute('required', 'true');
+    if (campoEnd) campoEnd.classList.remove('hidden');
+    if (inputEnd) inputEnd.setAttribute('required', 'true');
+    if (selectBairro) selectBairro.setAttribute('required', 'true');
+    
+    atualizarTaxaBairro();
   } else {
     btnRet.className = "bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl border border-brand-500";
     btnDel.className = "bg-zinc-900 text-zinc-400 font-bold text-xs py-2.5 rounded-xl border border-zinc-800";
-    campoEnd.classList.add('hidden');
-    inputEnd.removeAttribute('required');
+    if (campoEnd) campoEnd.classList.add('hidden');
+    if (inputEnd) inputEnd.removeAttribute('required');
+    if (selectBairro) selectBairro.removeAttribute('required');
+    taxaEntrega = 0;
   }
+
+  atualizarTotaisModal();
 }
 
 function toggleTroco(pagamento) {
@@ -316,28 +375,39 @@ function processarPedido(event) {
   event.preventDefault();
 
   const nome = document.getElementById('cli-nome').value;
-  const endereco = tipoEntrega === 'delivery' ? document.getElementById('cli-endereco').value : 'Retirada no Balcão';
+  const selectBairro = document.getElementById('cli-bairro');
+  const bairroNome = selectBairro && selectBairro.value ? selectBairro.value : '';
+  const rua = document.getElementById('cli-endereco') ? document.getElementById('cli-endereco').value : '';
   const complemento = document.getElementById('cli-complemento').value;
   const pagamento = document.getElementById('cli-pagamento').value;
   const troco = document.getElementById('cli-troco').value;
   const obs = document.getElementById('cli-obs').value;
 
   let itensArray = [];
-  let total = 0;
+  let subtotal = 0;
 
   Object.keys(carrinho).forEach(id => {
     const prod = PRODUTOS.find(p => p.id == id);
     if (prod) {
-      const subtotal = (parseFloat(prod.preco) || 0) * carrinho[id];
-      total += subtotal;
+      const sub = (parseFloat(prod.preco) || 0) * carrinho[id];
+      subtotal += sub;
       itensArray.push({ nome: prod.nome, qtd: carrinho[id], preco_unitario: prod.preco });
     }
   });
 
+  const taxaAplicada = (tipoEntrega === 'delivery') ? taxaEntrega : 0;
+  const total = subtotal + taxaAplicada;
+
+  const enderecoCompleto = tipoEntrega === 'delivery' 
+    ? `Bairro: ${bairroNome} - ${rua}`
+    : 'Retirada no Balcão';
+
   pedidoPendente = {
     cliente: nome,
+    bairro: bairroNome,
+    taxaEntrega: taxaAplicada,
     tipoEntrega: tipoEntrega,
-    endereco: endereco,
+    endereco: enderecoCompleto,
     complemento: complemento,
     pagamento: pagamento,
     troco: troco,
@@ -380,11 +450,11 @@ function cancelarPix() {
   pedidoPendente = null;
 }
 
-/* --- ENVIO DO PEDIDO, NOTIFICAÇÃO, TELA DE ACOMPANHAMENTO E LIMPEZA --- */
+/* --- ENVIO DO PEDIDO, NOTIFICAÇÃO E REDIRECIONAMENTO --- */
 
 async function finalizarEEnviarPedido(pedido) {
   const nomeRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.nome) ? RESTAURANTE.nome : 'Zero Grau';
-  const whatsRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.whatsapp) ? RESTAURANTE.whatsapp : '554298292510';
+  const whatsRest = (typeof RESTAURANTE !== 'undefined' && RESTAURANTE && RESTAURANTE.whatsapp) ? RESTAURANTE.whatsapp : '5513999999999';
 
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     const { data: novoPedido, error } = await supabaseClient.from('pedidos').insert([{
@@ -413,6 +483,7 @@ async function finalizarEEnviarPedido(pedido) {
     texto += `🛵 *Tipo:* ${pedido.tipoEntrega.toUpperCase()}\n`;
     if (pedido.tipoEntrega === 'delivery') {
       texto += `📍 *Endereço:* ${pedido.endereco}${pedido.complemento ? ' (' + pedido.complemento + ')' : ''}\n`;
+      texto += `🛵 *Taxa de Entrega:* R$ ${pedido.taxaEntrega.toFixed(2).replace('.', ',')}\n`;
     }
     texto += `💳 *Pagamento:* ${pedido.pagamento}${pedido.pagamento === 'Pix' ? ' (CONFIRMADO ONLINE)' : ''}${pedido.troco ? ' (Troco p/: ' + pedido.troco + ')' : ''}\n`;
     texto += `-----------------------------------\n\n`;
@@ -431,6 +502,7 @@ async function finalizarEEnviarPedido(pedido) {
     texto += `📍 *Acompanhe seu pedido em tempo real:* ${linkAcompanhamento}`;
 
     carrinho = {};
+    taxaEntrega = 0;
     atualizarBarra();
     renderProdutos();
 

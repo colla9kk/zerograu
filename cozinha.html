@@ -19,30 +19,20 @@
     }
   </script>
   <style>
-    /* Estilo exclusivo para impressora térmica (80mm/58mm) */
     @media print {
-      body * {
-        visibility: hidden;
-      }
-      #comanda-impressao, #comanda-impressao * {
-        visibility: visible;
-      }
+      body * { visibility: hidden; }
+      #comanda-impressao, #comanda-impressao * { visibility: visible; }
       #comanda-impressao {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        color: #000 !important;
-        background: #fff !important;
-        font-family: monospace;
-        padding: 5px;
+        position: absolute; left: 0; top: 0; width: 100%;
+        color: #000 !important; background: #fff !important;
+        font-family: monospace; padding: 5px;
       }
     }
   </style>
 </head>
 <body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen p-4 sm:p-6 pb-12">
 
-  <!-- MODAL DE LOGIN DA COZINHA (Aparece se não estiver logado) -->
+  <!-- MODAL DE LOGIN DA COZINHA -->
   <div id="modal-login-cozinha" class="fixed inset-0 bg-zinc-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
     <div class="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
       <div class="text-center mb-6">
@@ -64,10 +54,8 @@
     </div>
   </div>
 
-  <!-- CONTEÚDO DO PAINEL DA COZINHA (Fica oculto até logar) -->
+  <!-- CONTEÚDO DA COZINHA -->
   <div id="conteudo-cozinha" class="hidden">
-    
-    <!-- Header do Painel -->
     <header class="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-zinc-800 mb-6 max-w-7xl mx-auto">
       <div class="flex items-center gap-3">
         <img src="logo-zero.jpg" alt="Zero Grau Hamburgueria" class="w-12 h-12 rounded-full object-cover border-2 border-brand-600/30 shadow-md">
@@ -80,10 +68,9 @@
         </div>
       </div>
 
-      <!-- Indicadores do Topo + Botão de Sair -->
       <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
         <div class="bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-center">
-          <span class="text-[10px] font-extrabold text-zinc-500 uppercase block">Pendentes</span>
+          <span class="text-[10px] font-extrabold text-zinc-500 uppercase block">Fila Ativa</span>
           <span id="kds-count-pendentes" class="text-lg font-black text-brand-500">0</span>
         </div>
         <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl">
@@ -96,19 +83,15 @@
       </div>
     </header>
 
-    <!-- Container Grid dos Cards -->
     <main class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-w-7xl mx-auto" id="lista-pedidos-kds">
       <div class="col-span-full text-center py-20 text-zinc-500 font-bold text-sm">
         🔄 Carregando comandas...
       </div>
     </main>
-
   </div>
 
-  <!-- Container Oculto para Impressão Térmica -->
   <div id="comanda-impressao" class="hidden"></div>
 
-  <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/cozinha.js"></script>
 </body>

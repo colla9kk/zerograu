@@ -1,193 +1,192 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="scroll-smooth dark">
+<html lang="pt-BR" class="dark">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hamburgueria Zero Grau | Cardápio Digital</title>
+  <title>Zero Grau Hamburgueria | Cardápio Digital</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
-          colors: { brand: { 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', glow: 'rgba(220, 38, 38, 0.35)' } }
+          colors: { brand: { 500: '#ef4444', 600: '#dc2626' } }
         }
       }
     }
   </script>
   <style>
-    .glass-card { background: rgba(24, 24, 27, 0.65); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.07); }
-    .glass-nav { background: rgba(9, 9, 11, 0.85); backdrop-filter: blur(20px); }
-    .glass-modal { background: rgba(18, 18, 20, 0.95); backdrop-filter: blur(20px); }
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass-card {
+      background: rgba(24, 24, 27, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(63, 63, 70, 0.4);
+    }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 font-sans antialiased selection:bg-brand-600 selection:text-white pb-36">
+<body class="bg-zinc-950 text-zinc-100 font-sans antialiased min-h-screen pb-28">
 
-  <!-- Faixa do Topo -->
-  <div class="bg-gradient-to-r from-red-950 via-zinc-900 to-red-950 border-b border-red-900/30 py-2 px-4 text-center text-xs font-semibold text-zinc-300">
-    <span class="inline-flex items-center gap-1.5">
-      <span class="relative flex h-2 w-2">
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-500"></span>
-      </span>
-      Entregas no piloto automático sem taxas abusivas
-    </span>
-  </div>
-
-  <!-- Cabeçalho -->
-  <header class="sticky top-0 z-40 glass-nav border-b border-zinc-800/80">
-    <div class="max-w-xl mx-auto px-5 py-3.5 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <img src="logo-zero.jpg" alt="Zero Grau Hamburgueria" class="w-14 h-14 rounded-full object-cover border-2 border-brand-600/30 shadow-lg shadow-brand-600/20">
-          <h1 class="font-extrabold text-base tracking-tight text-white flex items-center gap-2">
-            ZERO GRAU <span class="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 font-bold px-1.5 py-0.5 rounded-md uppercase">Artesanal</span>
-          </h1>
-          <div class="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
-            <span class="text-emerald-400 font-medium">● Aberto</span> • <span>30-45 min</span> • <span class="text-amber-400 font-semibold">★ 4.9</span>
-          </div>
-        </div>
+  <!-- HEADER -->
+  <header class="p-4 sm:p-6 border-b border-zinc-800/80 sticky top-0 bg-zinc-950/90 backdrop-blur-md z-30">
+    <div class="max-w-3xl mx-auto flex items-center gap-4">
+      <img src="logo-zero.jpg" alt="Zero Grau Hamburgueria" class="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border-2 border-brand-600/30 shadow-lg">
+      <div>
+        <h1 class="text-lg sm:text-xl font-black text-white tracking-tight">ZERO GRAU HAMBURGUERIA</h1>
+        <p class="text-xs text-zinc-400">O melhor hambúrguer artesanal de Bituruna</p>
       </div>
     </div>
   </header>
 
-  <!-- Navegação por Categorias -->
-  <div class="sticky top-[69px] z-30 glass-nav border-b border-zinc-800/60 my-6 py-3">
-    <div class="max-w-xl mx-auto px-5 flex gap-2 overflow-x-auto hide-scrollbar">
-      <button onclick="filtrarCategoria('todos')" id="cat-todos" class="cat-btn active bg-brand-600 text-white text-xs font-bold px-4 py-2 rounded-xl whitespace-nowrap">Todos os Itens</button>
-      <button onclick="filtrarCategoria('burgers')" id="cat-burgers" class="cat-btn bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap">🍔 Hambúrgueres</button>
-      <button onclick="filtrarCategoria('combos')" id="cat-combos" class="cat-btn bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap">🔥 Combos</button>
-      <button onclick="filtrarCategoria('acai')" id="cat-acai" class="cat-btn bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap">🍧 Açaí</button>
-      <button onclick="filtrarCategoria('porcoes')" id="cat-porcoes" class="cat-btn bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap">🍟 Porções</button>
-      <button onclick="filtrarCategoria('bebidas')" id="cat-bebidas" class="cat-btn bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap">🥤 Bebidas</button>
-      <button onclick="filtrarCategoria('sobremesas')" id="cat-sobremesas" class="cat-btn bg-zinc-900 text-zinc-400 border border-zinc-800 text-xs font-semibold px-4 py-2 rounded-xl whitespace-nowrap">🍰 Sobremesas</button>
+  <!-- CATEGORIAS -->
+  <nav class="max-w-3xl mx-auto p-4 sticky top-[81px] bg-zinc-950/90 backdrop-blur-md z-20 overflow-x-auto">
+    <div class="flex items-center gap-2 min-w-max">
+      <button id="cat-todos" onclick="filtrarCategoria('todos')" class="cat-btn bg-brand-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition">Todos</button>
+      <button id="cat-burgers" onclick="filtrarCategoria('burgers')" class="cat-btn bg-zinc-900 text-zinc-400 font-bold text-xs px-4 py-2.5 rounded-xl transition">Hambúrgueres</button>
+      <button id="cat-porcoes" onclick="filtrarCategoria('porcoes')" class="cat-btn bg-zinc-900 text-zinc-400 font-bold text-xs px-4 py-2.5 rounded-xl transition">Porções</button>
+      <button id="cat-bebidas" onclick="filtrarCategoria('bebidas')" class="cat-btn bg-zinc-900 text-zinc-400 font-bold text-xs px-4 py-2.5 rounded-xl transition">Bebidas</button>
+      <button id="cat-sobremesas" onclick="filtrarCategoria('sobremesas')" class="cat-btn bg-zinc-900 text-zinc-400 font-bold text-xs px-4 py-2.5 rounded-xl transition">Sobremesas</button>
     </div>
-  </div>
+  </nav>
 
-  <!-- Lista de Produtos Renderizados via JS -->
-  <main class="max-w-xl mx-auto px-5 space-y-4" id="lista-produtos"></main>
+  <!-- LISTA DE PRODUTOS -->
+  <main class="max-w-3xl mx-auto p-4 space-y-4" id="lista-produtos">
+    <div class="text-center py-12 text-zinc-500 font-bold text-xs">
+      🔄 Carregando produtos do cardápio...
+    </div>
+  </main>
 
-  <!-- Barra de Checkout Flutuante -->
-  <div id="bar-checkout" class="fixed bottom-0 left-0 right-0 glass-nav border-t border-zinc-800/80 p-4 z-40 transition-all duration-300 transform translate-y-full">
-    <div class="max-w-xl mx-auto flex items-center justify-between gap-4">
+  <!-- BARRA INFERIOR DO CARRINHO -->
+  <div id="bar-checkout" class="fixed bottom-0 left-0 right-0 p-4 bg-zinc-900/95 border-t border-zinc-800 backdrop-blur-md z-30 transition-transform duration-300 translate-y-full">
+    <div class="max-w-3xl mx-auto flex items-center justify-between gap-4">
       <div>
-        <span class="text-[11px] font-semibold text-zinc-400 block uppercase tracking-wider" id="qtd-itens">0 itens</span>
-        <span class="text-xl font-black text-white tracking-tight" id="total-valor">R$ 0,00</span>
+        <span id="qtd-itens" class="text-xs font-bold text-zinc-400 block">0 itens selecionados</span>
+        <span id="total-valor" class="text-lg font-black text-white font-mono">R$ 0,00</span>
       </div>
-      <button onclick="abrirModalCheckout()" class="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 text-white font-extrabold text-sm px-6 py-3.5 rounded-xl flex items-center gap-2 shadow-lg shadow-brand-glow transition-all">
-        <span>Avançar para Entrega</span> ➔
+      <button onclick="abrirModalCheckout()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold px-5 py-2.5 rounded-xl transition flex items-center gap-2 shadow-lg shadow-brand-600/20 text-xs">
+        Ver Pedido →
       </button>
     </div>
   </div>
 
-  <!-- MODAL DE DADOS DE ENTREGA -->
-  <div id="modal-checkout" class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm hidden">
-    <div class="glass-modal border border-zinc-800 w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 overflow-y-auto max-h-[90vh]">
-      <div class="flex justify-between items-center border-b border-zinc-800 pb-4 mb-4">
-        <div>
-          <h2 class="text-lg font-black text-white">Dados da Entrega</h2>
-          <p class="text-xs text-zinc-400">Preencha os dados abaixo para continuar</p>
-        </div>
-        <button onclick="fecharModalCheckout()" class="w-8 h-8 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-full font-bold flex items-center justify-center">✕</button>
+  <!-- MODAL CHECKOUT -->
+  <div id="modal-checkout" class="fixed inset-0 bg-zinc-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-zinc-900 border border-zinc-800 w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-5 my-8">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-800">
+        <h2 class="text-lg font-bold text-white">Finalizar Pedido</h2>
+        <button onclick="fecharModalCheckout()" class="text-zinc-500 hover:text-white font-bold text-sm">✕</button>
       </div>
 
       <form id="form-checkout" onsubmit="processarPedido(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Seu Nome *</label>
-          <input type="text" id="cli-nome" required placeholder="Ex: Matheus Colla" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+        <!-- TIPO DE ENTREGA -->
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="btn-tipo-delivery" onclick="setTipoEntrega('delivery')" class="bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl border border-brand-500">
+            🛵 Delivery
+          </button>
+          <button type="button" id="btn-tipo-retirada" onclick="setTipoEntrega('retirada')" class="bg-zinc-900 text-zinc-400 font-bold text-xs py-2.5 rounded-xl border border-zinc-800">
+            🛍️ Retirar no Balcão
+          </button>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Tipo de Pedido</label>
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" onclick="setTipoEntrega('delivery')" id="btn-tipo-delivery" class="bg-brand-600 text-white font-bold text-xs py-2.5 rounded-xl border border-brand-500">🚚 Delivery</button>
-            <button type="button" onclick="setTipoEntrega('retirada')" id="btn-tipo-retirada" class="bg-zinc-900 text-zinc-400 font-bold text-xs py-2.5 rounded-xl border border-zinc-800">🛍️ Retirada</button>
-          </div>
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Seu Nome Completo</label>
+          <input type="text" id="cli-nome" required placeholder="Ex: João da Silva" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
         </div>
 
+        <!-- ENDEREÇO E BAIRROS -->
         <div id="campo-endereco" class="space-y-3">
           <div>
-            <label class="block text-xs font-bold text-zinc-300 mb-1">Endereço e Número *</label>
-            <input type="text" id="cli-endereco" placeholder="Rua, Número e Bairro" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Selecione seu Bairro (Bituruna)</label>
+            <select id="cli-bairro" onchange="atualizarTaxaBairro()" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+              <option value="" disabled selected>Escolha o bairro...</option>
+              <option value="Centro" data-taxa="4.00">Centro — R$ 4,00</option>
+              <option value="São Vicente" data-taxa="5.00">São Vicente — R$ 5,00</option>
+              <option value="Vila Mariana" data-taxa="5.00">Vila Mariana — R$ 5,00</option>
+              <option value="Jardim Belém" data-taxa="5.00">Jardim Belém — R$ 5,00</option>
+              <option value="Nossa Senhora Aparecida" data-taxa="5.00">Nossa Senhora Aparecida — R$ 5,00</option>
+              <option value="Outro Bairro Urbano" data-taxa="6.00">Outro Bairro (Perímetro Urbano) — R$ 6,00</option>
+              <option value="Interior" data-retirada="true">Interior / Fora da Cidade (Apenas Retirada)</option>
+            </select>
           </div>
+
           <div>
-            <label class="block text-xs font-bold text-zinc-300 mb-1">Ponto de Referência / Apto</label>
-            <input type="text" id="cli-complemento" placeholder="Ex: Próximo à praça / Apto 12" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Rua, Número e Ponto de Referência</label>
+            <input type="text" id="cli-endereco" placeholder="Ex: Rua Dr. Oscar Geyer, 123 - Próximo à praça" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-zinc-400 block mb-1">Complemento (Opcional)</label>
+            <input type="text" id="cli-complemento" placeholder="Ex: Apto 202 / Casa dos fundos" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Forma de Pagamento *</label>
-          <select id="cli-pagamento" onchange="toggleTroco(this.value)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
-            <option value="Pix">Pix (Pagamento Online Imediato)</option>
-            <option value="Cartão de Débito">Cartão de Débito (Na entrega)</option>
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Forma de Pagamento</label>
+          <select id="cli-pagamento" onchange="toggleTroco(this.value)" required class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
+            <option value="Pix">Pix (Chave Instantânea)</option>
             <option value="Cartão de Crédito">Cartão de Crédito (Na entrega)</option>
-            <option value="Dinheiro">Dinheiro (Na entrega)</option>
+            <option value="Cartão de Débito">Cartão de Débito (Na entrega)</option>
+            <option value="Dinheiro">Dinheiro</option>
           </select>
         </div>
 
         <div id="campo-troco" class="hidden">
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Precisa de troco para quanto?</label>
-          <input type="text" id="cli-troco" placeholder="Ex: R$ 50,00 ou Não preciso" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500">
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Precisa de troco para quanto?</label>
+          <input type="text" id="cli-troco" placeholder="Ex: R$ 50,00" class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500">
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-zinc-300 mb-1">Observações do Pedido</label>
-          <textarea id="cli-obs" rows="2" placeholder="Ex: Sem cebola, capricha na calda de chocolate" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-brand-500 resize-none"></textarea>
+          <label class="text-xs font-bold text-zinc-400 block mb-1">Observações do Pedido</label>
+          <textarea id="cli-obs" rows="2" placeholder="Ex: Sem cebola, ponto da carne bem passado..." class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-brand-500"></textarea>
         </div>
 
-        <div class="pt-2">
-          <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 active:scale-95 text-white font-extrabold text-sm py-4 rounded-xl shadow-lg shadow-brand-glow transition-all">
-            Avançar para Pagamento ➔
-          </button>
+        <!-- RESUMO DE VALORES -->
+        <div class="bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 my-2 space-y-1.5 text-xs">
+          <div class="flex justify-between text-zinc-400">
+            <span>Subtotal dos itens:</span>
+            <span id="modal-subtotal-val" class="font-mono">R$ 0,00</span>
+          </div>
+          <div class="flex justify-between text-zinc-400" id="linha-taxa-entrega">
+            <span>Taxa de entrega:</span>
+            <span id="modal-taxa-val" class="text-brand-500 font-bold font-mono">R$ 0,00</span>
+          </div>
+          <div class="flex justify-between text-white font-extrabold text-sm pt-2 border-t border-zinc-800/80">
+            <span>Total do Pedido:</span>
+            <span id="modal-total-val" class="text-emerald-400 font-mono">R$ 0,00</span>
+          </div>
         </div>
+
+        <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3.5 rounded-2xl transition text-xs shadow-lg shadow-brand-600/20">
+          Enviar Pedido via WhatsApp
+        </button>
       </form>
     </div>
   </div>
 
-  <!-- MODAL DE PAGAMENTO PIX -->
-  <div id="modal-pix" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md hidden">
-    <div class="glass-modal border border-zinc-800 w-full max-w-md rounded-3xl p-6 text-center space-y-5">
-      <div class="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
-        ❖
+  <!-- MODAL PIX -->
+  <div id="modal-pix" class="fixed inset-0 bg-zinc-950/90 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-3xl p-6 shadow-2xl text-center space-y-4">
+      <h3 class="text-base font-bold text-white">Pagamento via Pix</h3>
+      <p class="text-xs text-zinc-400">Escaneie o QR Code ou copie a chave abaixo:</p>
+      
+      <div class="bg-zinc-950 border border-zinc-800 p-3 rounded-2xl inline-block">
+        <p class="text-xs font-mono font-bold text-emerald-400 break-all select-all" id="pix-chave">00020126360014BR.GOV.BCB.PIX0114+5513999999999520400005303986540510.005802BR5910ZERO GRAU6008BITURUNA62070503***6304E2CA</p>
       </div>
 
-      <div>
-        <h2 class="text-xl font-black text-white">Pagamento via Pix</h2>
-        <p class="text-xs text-zinc-400 mt-1">O pedido só será enviado para a cozinha após a confirmação do pagamento.</p>
-      </div>
+      <p class="text-sm font-black text-white" id="pix-valor-total">R$ 0,00</p>
 
-      <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl space-y-3">
-        <span class="text-xs text-zinc-400 block font-semibold uppercase">Valor Total do Pix</span>
-        <span id="pix-valor-total" class="text-3xl font-black text-emerald-400 block">R$ 0,00</span>
-        
-        <div class="bg-zinc-950 p-3 rounded-xl border border-zinc-800/80">
-          <span class="text-[10px] text-zinc-500 block uppercase font-bold mb-1">Chave Pix Copia e Cola</span>
-          <p id="pix-chave" class="text-xs font-mono text-zinc-300 truncate select-all">00020126360014BR.GOV.BCB.PIX0114+5513999999999520400005303986540500.005802BR5925ZERO GRAU HAMBURGUERIA6009GUARUJA62070503***6304E2CA</p>
-        </div>
-
-        <button onclick="copiarChavePix()" id="btn-copiar-pix" class="w-full bg-zinc-800 hover:bg-zinc-700 text-xs text-white font-bold py-2.5 rounded-xl border border-zinc-700 transition">
+      <div class="space-y-2">
+        <button onclick="copiarChavePix()" id="btn-copiar-pix" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-2.5 rounded-xl transition text-xs">
           📋 Copiar Chave Pix
         </button>
-      </div>
-
-      <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-left">
-        <p class="text-xs text-amber-400 leading-relaxed font-medium">
-          ⏳ <strong>Aguardando confirmação:</strong> Após realizar o pagamento no app do seu banco, clique no botão abaixo para liberar o pedido na cozinha.
-        </p>
-      </div>
-
-      <div class="space-y-2 pt-2">
-        <button onclick="confirmarPagamentoPix()" class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-sm py-3.5 rounded-xl shadow-lg shadow-emerald-600/20 transition-all">
-          ✓ Já Paguei! Confirmar Pedido
+        <button onclick="confirmarPagamentoPix()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition text-xs shadow-lg shadow-emerald-600/20">
+          ✓ Já realizei o Pagamento
         </button>
-        <button onclick="cancelarPix()" class="w-full text-zinc-500 hover:text-zinc-400 text-xs font-semibold py-2">
-          Cancelar e Voltar
+        <button onclick="cancelarPix()" class="w-full text-zinc-500 hover:text-zinc-400 font-bold py-1 text-xs">
+          Cancelar
         </button>
       </div>
     </div>

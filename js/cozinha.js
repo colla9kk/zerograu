@@ -1,4 +1,3 @@
-// Senha de acesso definida para a cozinha
 const SENHA_COZINHA_CORRETA = "cozinha123";
 
 /* --- CONTROLE DE SESSÃO E LOGIN --- */
@@ -44,7 +43,6 @@ async function carregarPedidosCozinha() {
 
   if (typeof supabaseClient !== 'undefined' && supabaseClient) {
     try {
-      // 1. Checa status da assinatura do restaurante
       const { data: restaurante, error: erroStatus } = await supabaseClient
         .from('restaurantes')
         .select('status_assinatura')
@@ -64,7 +62,6 @@ async function carregarPedidosCozinha() {
         return;
       }
 
-      // 2. Carrega pedidos 'pendente' e 'em_preparo'
       const { data: pedidos, error: erroPedidos } = await supabaseClient
         .from('pedidos')
         .select('*')
@@ -76,7 +73,6 @@ async function carregarPedidosCozinha() {
         return;
       }
 
-      // Atualiza o contador de pendentes e em preparo no topo
       const contadorEl = document.getElementById('kds-count-pendentes') || 
                          document.getElementById('qtd-pendentes') || 
                          document.getElementById('contador-pedidos');
@@ -281,7 +277,6 @@ function calcularTempoEspera(dataString) {
   return { texto: `⚠️ ${diffMinutos} min atrás`, classe: "bg-red-500/20 text-red-400 border border-red-500/30 animate-pulse" };
 }
 
-// Inicializa verificação de sessão e atualiza a cada 5 segundos
 verificarSessaoCozinha();
 setInterval(() => {
   if (localStorage.getItem('cozinha_logada') === 'true') {

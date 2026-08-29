@@ -37,7 +37,6 @@ function renderizarStatus(pedido) {
   const step2 = document.getElementById('step-2');
   const step3 = document.getElementById('step-3');
 
-  // Reset steps
   [step1, step2, step3].forEach(el => el.className = "text-zinc-600 space-y-1");
 
   if (pedido.status === 'pendente') {
@@ -71,7 +70,6 @@ function renderizarStatus(pedido) {
     statusDescricao.innerText = "Entre em contato pelo WhatsApp caso precise de suporte.";
   }
 
-  // Preenche dados do pedido
   document.getElementById('detalhes-pedido-id').innerText = `Pedido #${pedido.id}`;
   document.getElementById('detalhes-pedido-total').innerText = `R$ ${parseFloat(pedido.total || 0).toFixed(2).replace('.', ',')}`;
   document.getElementById('detalhes-cliente').innerText = pedido.cliente || '---';
@@ -97,8 +95,6 @@ function renderizarStatus(pedido) {
   }
 }
 
-/* --- ATUALIZAÇÃO EM TEMPO REAL SEM ATUALIZAR A PÁGINA --- */
-
 function iniciarEscutaRealtimePedido(id) {
   if (!supabaseClient) return;
 
@@ -112,5 +108,4 @@ function iniciarEscutaRealtimePedido(id) {
     .subscribe();
 }
 
-// Inicializa o carregamento ao abrir a tela
 carregarStatusPedido();
