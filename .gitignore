@@ -1,0 +1,12 @@
+# Pastas e arquivos de sistema
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Configurações de IDEs
+.vscode/
+.idea/
+
+# Logs e temporários
+*.log
+npm-debug.log*
