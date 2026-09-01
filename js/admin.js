@@ -45,30 +45,38 @@ async function carregarDadosAdmin() {
 }
 
 async function carregarStatusHorariosLoja() {
-  if (!supabaseClient) return;
-  const { data, error } = await supabaseClient.from('restaurantes').select('*').limit(1).single();
-  if (!error && data) {
-    const btnToggle = document.getElementById('admin-btn-toggle-loja');
-    if (btnToggle) {
-      if (data.loja_aberta) {
-        btnToggle.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition";
-        btnToggle.innerText = "🟢 Loja ABERTA (Clique p/ Fechar)";
-        btnToggle.onclick = () => alternarStatusLoja(false);
-      } else {
-        btnToggle.className = "bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition";
-        btnToggle.innerText = "🔴 Loja FECHADA (Clique p/ Abrir)";
-        btnToggle.onclick = () => alternarStatusLoja(true);
+  if (typeof supabaseClient === 'undefined' || !supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient.from('restaurantes').select('*').limit(1).single();
+    if (!error && data) {
+      const btnToggle = document.getElementById('admin-btn-toggle-loja');
+      if (btnToggle) {
+        if (data.loja_aberta) {
+          btnToggle.className = "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition";
+          btnToggle.innerText = "🟢 Loja ABERTA (Clique p/ Fechar)";
+          btnToggle.onclick = () => alternarStatusLoja(false);
+        } else {
+          btnToggle.className = "bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition";
+          btnToggle.innerText = "🔴 Loja FECHADA (Clique p/ Abrir)";
+          btnToggle.onclick = () => alternarStatusLoja(true);
+        }
       }
+      if (document.getElementById('admin-hora-abertura')) document.getElementById('admin-hora-abertura').value = data.hora_abertura || '';
+      if (document.getElementById('admin-hora-fechamento')) document.getElementById('admin-hora-fechamento').value = data.hora_fechamento || '';
     }
-    if (document.getElementById('admin-hora-abertura')) document.getElementById('admin-hora-abertura').value = data.hora_abertura || '';
-    if (document.getElementById('admin-hora-fechamento')) document.getElementById('admin-hora-fechamento').value = data.hora_fechamento || '';
+  } catch (err) {
+    console.warn("Erro ao buscar restaurantes:", err);
   }
 }
 
 async function alternarStatusLoja(novoStatus) {
   if (!supabaseClient) return;
-  await supabaseClient.from('restaurantes').update({ loja_aberta: novoStatus }).neq('id', 0);
-  carregarStatusHorariosLoja();
+  const { error } = await supabaseClient.from('restaurantes').update({ loja_aberta: novoStatus }).neq('id', 0);
+  if (error) {
+    alert("Erro ao alterar status no Supabase: " + error.message);
+  } else {
+    carregarStatusHorariosLoja();
+  }
 }
 
 async function salvarHorariosAtendimento(e) {
@@ -76,64 +84,115 @@ async function salvarHorariosAtendimento(e) {
   if (!supabaseClient) return;
   const hA = document.getElementById('admin-hora-abertura').value;
   const hF = document.getElementById('admin-hora-fechamento').value;
-  await supabaseClient.from('restaurantes').update({ hora_abertura: hA, hora_fechamento: hF }).neq('id', 0);
-  alert("Horários salvos com sucesso!");
+  
+  const { error } = await supabaseClient.from('restaurantes').update({ hora_abertura: hA, hora_fechamento: hF }).neq('id', 0);
+  if (error) {
+    alert("Erro ao salvar horários: " + error.message);
+  } else {
+    alert("Horários salvos com sucesso!");
+  }
 }
+
+/* --- CADASTRO DE PRODUTO COM VALIDAÇÃO REAL --- */
 
 async function salvarProduto(e) {
   e.preventDefault();
-  if (!supabaseClient) return;
-
-  const nome = document.getElementById('p-nome').value;
-  const cat = document.getElementById('p-cat').value;
-  const preco = parseFloat(document.getElementById('p-preco').value.replace(',', '.'));
-  const badge = document.getElementById('p-badge').value;
-  const desc = document.getElementById('p-desc').value;
-  const fileInput = document.getElementById('p-imagem-file');
-
-  let imagemUrl = '';
-  if (fileInput && fileInput.files.length > 0) {
-    const file = fileInput.files[0];
-    const fileName = `${Date.now()}_${file.name}`;
-    const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('produtos').upload(fileName, file);
-    if (!uploadError && uploadData) {
-      const { data: publicUrlData } = supabaseClient.storage.from('produtos').getPublicUrl(fileName);
-      imagemUrl = publicUrlData.publicUrl;
-    }
+  if (!supabaseClient) {
+    alert("Erro de conexão com o banco de dados.");
+    return;
   }
 
-  await supabaseClient.from('produtos').insert([{
-    nome: nome,
-    cat: cat,
-    preco: preco,
-    badge: badge,
-    desc: desc,
-    imagem: imagemUrl,
-    ativo: true
-  }]);
+  const btnSalvar = document.getElementById('btn-salvar');
+  if (btnSalvar) {
+    btnSalvar.disabled = true;
+    btnSalvar.innerText = "Salvando produto...";
+  }
 
-  document.getElementById('form-add-produto').reset();
-  carregarListaProdutosAdmin();
-  alert("Produto cadastrado com sucesso!");
+  try {
+    const nome = document.getElementById('p-nome').value;
+    const cat = document.getElementById('p-cat').value;
+    const preco = parseFloat(document.getElementById('p-preco').value.replace(',', '.'));
+    const badge = document.getElementById('p-badge')?.value || '';
+    const desc = document.getElementById('p-desc')?.value || '';
+    const fileInput = document.getElementById('p-imagem-file');
+
+    let imagemUrl = '';
+
+    // Upload da Imagem no Storage
+    if (fileInput && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      
+      const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('produtos').upload(fileName, file);
+      
+      if (uploadError) {
+        console.warn("Erro ao subir imagem:", uploadError.message);
+      } else if (uploadData) {
+        const { data: publicUrlData } = supabaseClient.storage.from('produtos').getPublicUrl(fileName);
+        imagemUrl = publicUrlData.publicUrl;
+      }
+    }
+
+    // Gravação no Banco com Validação do Supabase
+    const { error } = await supabaseClient.from('produtos').insert([{
+      nome: nome,
+      cat: cat,
+      preco: preco,
+      badge: badge,
+      desc: desc,
+      descricao: desc, // Salva em ambos para evitar incompatibilidade no schema
+      imagem: imagemUrl,
+      ativo: true
+    }]);
+
+    if (error) {
+      console.error("❌ Erro do Supabase:", error);
+      alert(`⚠️ Erro ao salvar produto:\n\n${error.message}\n\n(Verifique se o RLS está desativado no Supabase)`);
+    } else {
+      document.getElementById('form-add-produto').reset();
+      await carregarListaProdutosAdmin();
+      alert("✅ Produto cadastrado com sucesso!");
+    }
+
+  } catch (err) {
+    console.error("Erro no script:", err);
+    alert("Erro inesperado ao cadastrar produto.");
+  } finally {
+    if (btnSalvar) {
+      btnSalvar.disabled = false;
+      btnSalvar.innerText = "Salvar Produto no Cardápio";
+    }
+  }
 }
 
 async function carregarListaProdutosAdmin() {
   const container = document.getElementById('lista-admin-produtos');
   if (!container || !supabaseClient) return;
 
+  container.innerHTML = `<p class="text-xs text-zinc-500">Carregando produtos...</p>`;
+
   const { data: produtos, error } = await supabaseClient.from('produtos').select('*').order('id', { ascending: false });
-  if (error || !produtos) return;
+  
+  if (error) {
+    container.innerHTML = `<p class="text-xs text-red-400">Erro ao listar produtos: ${error.message}</p>`;
+    return;
+  }
+
+  if (!produtos || produtos.length === 0) {
+    container.innerHTML = `<p class="text-xs text-zinc-500">Nenhum produto cadastrado no momento.</p>`;
+    return;
+  }
 
   container.innerHTML = produtos.map(p => `
     <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-xl flex items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        ${p.imagem ? `<img src="${p.imagem}" class="w-12 h-12 rounded-lg object-cover">` : ''}
-        <div>
-          <h4 class="font-bold text-white text-sm">${p.nome}</h4>
-          <p class="text-xs text-brand-500 font-extrabold">R$ ${parseFloat(p.preco || 0).toFixed(2).replace('.', ',')} - <span class="text-zinc-500 font-normal uppercase">${p.cat}</span></p>
+      <div class="flex items-center gap-3 overflow-hidden">
+        ${p.imagem ? `<img src="${p.imagem}" class="w-12 h-12 rounded-lg object-cover flex-shrink-0">` : `<div class="w-12 h-12 bg-zinc-800 rounded-lg flex items-center justify-center text-lg flex-shrink-0">🍔</div>`}
+        <div class="truncate">
+          <h4 class="font-bold text-white text-sm truncate">${p.nome}</h4>
+          <p class="text-xs text-brand-500 font-extrabold">R$ ${parseFloat(p.preco || 0).toFixed(2).replace('.', ',')} - <span class="text-zinc-500 font-normal uppercase">${p.cat || 'geral'}</span></p>
         </div>
       </div>
-      <button onclick="deletarProduto(${p.id})" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-500/20 transition">
+      <button onclick="deletarProduto(${p.id})" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-500/20 transition flex-shrink-0">
         Excluir
       </button>
     </div>
@@ -142,8 +201,12 @@ async function carregarListaProdutosAdmin() {
 
 async function deletarProduto(id) {
   if (confirm("Deseja realmente excluir este produto?")) {
-    await supabaseClient.from('produtos').delete().eq('id', id);
-    carregarListaProdutosAdmin();
+    const { error } = await supabaseClient.from('produtos').delete().eq('id', id);
+    if (error) {
+      alert("Erro ao excluir: " + error.message);
+    } else {
+      carregarListaProdutosAdmin();
+    }
   }
 }
 
@@ -156,7 +219,7 @@ async function carregarRelatorioVendas() {
   const faturamento = pedidos ? pedidos.reduce((acc, p) => acc + (parseFloat(p.total) || 0), 0) : 0;
 
   container.innerHTML = `
-    <div class="grid grid-cols-2 sm:grid-cols-2 gap-4">
+    <div class="grid grid-cols-2 gap-4">
       <div class="bg-zinc-900 border border-zinc-800 p-4 rounded-2xl">
         <span class="text-xs font-bold text-zinc-500 uppercase block mb-1">Total de Pedidos</span>
         <span class="text-2xl font-black text-white">${totalPedidos}</span>
@@ -169,4 +232,7 @@ async function carregarRelatorioVendas() {
   `;
 }
 
-verificarSessaoAdmin();
+// Inicialização da sessão ao carregar o script
+document.addEventListener('DOMContentLoaded', () => {
+  verificarSessaoAdmin();
+});
