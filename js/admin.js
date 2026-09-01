@@ -84,7 +84,7 @@ async function salvarHorariosAtendimento(e) {
   if (!supabaseClient) return;
   const hA = document.getElementById('admin-hora-abertura').value;
   const hF = document.getElementById('admin-hora-fechamento').value;
-  
+
   const { error } = await supabaseClient.from('restaurantes').update({ hora_abertura: hA, hora_fechamento: hF }).neq('id', 0);
   if (error) {
     alert("Erro ao salvar horários: " + error.message);
@@ -93,7 +93,7 @@ async function salvarHorariosAtendimento(e) {
   }
 }
 
-/* --- CADASTRO DE PRODUTO COM VALIDAÇÃO REAL --- */
+/* --- CADASTRO DE PRODUTO (FIX: APENAS COLUNA 'DESCRICAO') --- */
 
 async function salvarProduto(e) {
   e.preventDefault();
@@ -118,13 +118,12 @@ async function salvarProduto(e) {
 
     let imagemUrl = '';
 
-    // Upload da Imagem no Storage
     if (fileInput && fileInput.files.length > 0) {
       const file = fileInput.files[0];
       const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
-      
+
       const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('produtos').upload(fileName, file);
-      
+
       if (uploadError) {
         console.warn("Erro ao subir imagem:", uploadError.message);
       } else if (uploadData) {
@@ -133,21 +132,19 @@ async function salvarProduto(e) {
       }
     }
 
-    // Gravação no Banco com Validação do Supabase
     const { error } = await supabaseClient.from('produtos').insert([{
       nome: nome,
       cat: cat,
       preco: preco,
       badge: badge,
-      desc: desc,
-      descricao: desc, // Salva em ambos para evitar incompatibilidade no schema
+      descricao: desc,
       imagem: imagemUrl,
       ativo: true
     }]);
 
     if (error) {
       console.error("❌ Erro do Supabase:", error);
-      alert(`⚠️ Erro ao salvar produto:\n\n${error.message}\n\n(Verifique se o RLS está desativado no Supabase)`);
+      alert(`⚠️ Erro do Banco de Dados:\n\n${error.message}`);
     } else {
       document.getElementById('form-add-produto').reset();
       await carregarListaProdutosAdmin();
@@ -172,7 +169,7 @@ async function carregarListaProdutosAdmin() {
   container.innerHTML = `<p class="text-xs text-zinc-500">Carregando produtos...</p>`;
 
   const { data: produtos, error } = await supabaseClient.from('produtos').select('*').order('id', { ascending: false });
-  
+
   if (error) {
     container.innerHTML = `<p class="text-xs text-red-400">Erro ao listar produtos: ${error.message}</p>`;
     return;
@@ -232,7 +229,6 @@ async function carregarRelatorioVendas() {
   `;
 }
 
-// Inicialização da sessão ao carregar o script
 document.addEventListener('DOMContentLoaded', () => {
   verificarSessaoAdmin();
 });
